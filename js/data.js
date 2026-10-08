@@ -38,7 +38,7 @@ const LONGEVITY = [
   { id: "long", label: "Long-lasting (8h+)" }
 ];
 
-const BRANDS = [
+let BRANDS = [
   { id: "lattafa", name: "Lattafa", tag: "Trending Arabic" },
   { id: "mousuf", name: "Mousuf", tag: "Trending Arabic" },
   { id: "alhambra", name: "Alhambra", tag: "Designer-inspired" },
@@ -47,8 +47,8 @@ const BRANDS = [
   { id: "imibavu-jewels", name: "Imibavu Jewels", tag: "Minimalist jewelry" }
 ];
 
-/* size options: [ml, price RWF] */
-const PRODUCTS = [
+/* size options: [ml, price RWF] — `let` so the API catalog can replace it at boot */
+let PRODUCTS = [
   {
     id: "khamrah", name: "Khamrah", brand: "lattafa", category: "perfumes",
     gender: "Unisex", family: "Sweet", longevity: "long",

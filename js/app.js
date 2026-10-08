@@ -21,7 +21,7 @@ const S = {
   filter: { cat: "", brand: "", gender: "", family: "", longevity: "", col: "", q: "", min: "", max: "", sort: "trending" },
   quiz: { step: 0, a: { mood: "", season: "", notes: [] } },
   pd: { size: 0, img: 0, tab: "reviews" },
-  acc: { tab: "orders", signed: false, phone: "" },
+  acc: { tab: "orders", signed: false, phone: "", authMode: "login", devCode: "", pendingPhone: "", pendingUser: null },
   adm: { tab: "products" }
 };
 
@@ -932,15 +932,54 @@ function viewOrder(code) {
 /* -------- account -------- */
 function viewAccount() {
   if (!S.user) {
-    return `<div class="page-head"><div class="container"><span class="kicker">${t("account")}</span><h1>${t("login_title")}</h1><p>${t("login_sub")}</p></div></div>
-    <div class="page-body"><div class="container" style="max-width:460px">
-      <form class="card-box" data-form="login">
+    const m = S.acc.authMode;
+    const title = m === "register" ? "Create account"
+      : m === "reset" ? "Reset password"
+      : m === "verify" ? "Verify your phone"
+      : t("login_title");
+    const sub = (m === "verify" || m === "reset") && S.acc.devCode
+      ? `Console OTP: <b>${esc(S.acc.devCode)}</b> (SMS goes live when Africa's Talking keys are set)`
+      : t("login_sub");
+
+    let form = "";
+    if (m === "login") {
+      form = `<form class="card-box" data-form="auth" data-mode="login">
         <div class="field"><label>${t("phone_num")}</label><input name="id" placeholder="+250 784 804 739" required></div>
-        <div class="field" style="margin-top:12px"><label>${t("full_name")}</label><input name="name" placeholder="Optional"></div>
+        <div class="field" style="margin-top:12px"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
         <button class="btn full" style="margin-top:16px" type="submit">${t("continue")}</button>
-        <p class="form-note" style="margin-top:12px">${t("guest_note")}</p>
-      </form>
-    </div></div>`;
+        <p class="form-note" style="margin-top:12px">
+          <a href="#" data-act="auth-mode" data-mode="reset">Forgot password?</a>
+          · <a href="#" data-act="auth-mode" data-mode="register">Create an account</a>
+        </p>
+      </form>`;
+    } else if (m === "register") {
+      form = `<form class="card-box" data-form="auth" data-mode="register">
+        <div class="field"><label>${t("full_name")}</label><input name="name" placeholder="Your name" required></div>
+        <div class="field" style="margin-top:12px"><label>${t("phone_num")}</label><input name="phone" placeholder="+250 784 804 739" required></div>
+        <div class="field" style="margin-top:12px"><label>Email (optional)</label><input name="email" type="email" placeholder="you@example.com"></div>
+        <div class="field" style="margin-top:12px"><label>Password</label><input name="password" type="password" autocomplete="new-password" required minlength="8">
+          <small class="muted">At least 8 characters, with a letter and a number.</small></div>
+        <button class="btn full" style="margin-top:16px" type="submit">${t("continue")}</button>
+        <p class="form-note" style="margin-top:12px"><a href="#" data-act="auth-mode" data-mode="login">I already have an account</a></p>
+      </form>`;
+    } else if (m === "verify") {
+      form = `<form class="card-box" data-form="auth" data-mode="verify">
+        <div class="field"><label>6-digit code</label><input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required></div>
+        <button class="btn full" style="margin-top:16px" type="submit">Verify</button>
+        <p class="form-note" style="margin-top:12px"><a href="#" data-act="otp-resend">Resend code</a> · <a href="#" data-act="auth-mode" data-mode="login">Back to sign in</a></p>
+      </form>`;
+    } else {
+      form = `<form class="card-box" data-form="auth" data-mode="reset">
+        <div class="field"><label>${t("phone_num")}</label><input name="phone" placeholder="+250 784 804 739" required></div>
+        <div class="field" style="margin-top:12px"><label>New password</label><input name="password" type="password" autocomplete="new-password" required minlength="8"></div>
+        <div class="field" style="margin-top:12px"><label>Code sent by SMS</label><input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required></div>
+        <button class="btn full" style="margin-top:16px" type="submit">Reset password</button>
+        <p class="form-note" style="margin-top:12px"><a href="#" data-act="auth-mode" data-mode="login">Back to sign in</a></p>
+      </form>`;
+    }
+
+    return `<div class="page-head"><div class="container"><span class="kicker">${t("account")}</span><h1>${esc(title)}</h1><p>${sub}</p></div></div>
+    <div class="page-body"><div class="container" style="max-width:460px">${form}</div></div>`;
   }
   const tabs = [["orders", t("orders")], ["wish", t("wishlist_title")], ["blends", t("saved_blends")], ["addr", t("addresses")]];
   let body = "";
@@ -982,6 +1021,16 @@ function viewAccount() {
 
 /* -------- back office -------- */
 function viewAdmin() {
+  if (!S.user || !["admin", "staff"].includes(S.user.role)) {
+    return `<div class="page-head"><div class="container"><span class="kicker">${t("admin")}</span><h1>Back office</h1></div></div>
+    <div class="page-body"><div class="container" style="max-width:520px">
+      <div class="empty-state">
+        <h3>${S.user ? "Staff access required" : "Sign in required"}</h3>
+        <p class="muted">${S.user ? "This account does not have back-office permissions." : "Sign in with a staff or admin account to continue."}</p>
+        <a class="btn" href="#/account">${S.user ? "Back to account" : t("continue")}</a>
+      </div>
+    </div></div>`;
+  }
   const tabs = [["products", t("admin_products")], ["orders", t("admin_orders")], ["promos", "Promos"], ["reviews", "Reviews"], ["reports", t("admin_reports")]];
   const revenue = S.orders.reduce((n, o) => n + o.total, 0);
   let body = "";
@@ -1285,7 +1334,32 @@ document.addEventListener("click", e => {
     case "blend-del": S.blends.splice(+el.dataset.i, 1); save("imibavu_blends", S.blends); route(); break;
     /* account / admin */
     case "acc-tab": S.acc.tab = el.dataset.k; route(); break;
-    case "logout": S.user = null; save("imibavu_user", null); route(); break;
+    case "logout":
+      api.logout();
+      S.user = null; save("imibavu_user", null);
+      S.acc.authMode = "login"; S.acc.devCode = "";
+      route(); break;
+    case "auth-mode":
+      e.preventDefault();
+      S.acc.authMode = el.dataset.mode; S.acc.devCode = "";
+      route(); break;
+    case "otp-resend": {
+      e.preventDefault();
+      api.post("/auth/otp/send", { phone: S.acc.pendingPhone, purpose: "verify_phone" })
+        .then(r => { S.acc.devCode = r.devCode || ""; toast("Code sent"); route(); })
+        .catch(err => toast(err.message || "Could not send code"));
+      break;
+    }
+    case "otp-reset-send": {
+      e.preventDefault();
+      const form = el.closest("form");
+      const phone = form ? form.querySelector('[name="phone"]').value.trim() : "";
+      if (!phone) { toast("Enter your phone number first"); break; }
+      api.post("/auth/forgot-password", { phone })
+        .then(r => { S.acc.devCode = r.devCode || ""; toast(r.devCode ? "Code sent (console)" : "If that number has an account, a code is on its way"); route(); })
+        .catch(err => toast(err.message || "Could not send code"));
+      break;
+    }
     case "adm-tab": S.adm.tab = el.dataset.k; route(); break;
     case "adm-hide": {
       const id = el.dataset.id, i = S.hidden.indexOf(id);
@@ -1414,13 +1488,84 @@ document.addEventListener("submit", e => {
     return;
   }
 
-  if (kind === "login") {
+  if (kind === "auth") {
     e.preventDefault();
     const d = new FormData(f);
-    S.user = { phone: d.get("id"), name: d.get("name") || "" };
-    save("imibavu_user", S.user);
-    toast("Signed in ✓");
-    route(); return;
+    const mode = f.dataset.mode;
+    const btn = f.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    const fail = err => {
+      if (btn) btn.disabled = false;
+      toast((err && err.message) || "Something went wrong — please try again");
+    };
+    const normPhone = raw => {
+      let p = String(raw || "").replace(/[\s\-().]/g, "");
+      if (/^0\d{9}$/.test(p)) p = "+250" + p.slice(1);
+      if (/^250\d{9}$/.test(p)) p = "+" + p;
+      return p;
+    };
+    const toState = u => ({ id: u.id, name: u.name, phone: u.phone, email: u.email, role: u.role, isVerified: u.isVerified });
+
+    if (mode === "login") {
+      api.post("/auth/login", {
+        identifier: String(d.get("id") || "").trim(),
+        password: d.get("password"),
+      }).then(r => {
+        S.user = toState(r.user); save("imibavu_user", S.user);
+        S.acc.authMode = "login"; S.acc.devCode = "";
+        toast("Signed in ✓"); route();
+      }).catch(fail);
+      return;
+    }
+
+    if (mode === "register") {
+      const payload = {
+        name: String(d.get("name") || "").trim(),
+        phone: normPhone(d.get("phone")),
+        password: d.get("password"),
+      };
+      const email = String(d.get("email") || "").trim();
+      if (email) payload.email = email;
+      api.post("/auth/register", payload).then(r => {
+        if (btn) btn.disabled = false;
+        api.setAccessToken(r.accessToken);
+        S.acc.pendingPhone = r.user.phone || "";
+        S.acc.pendingUser = toState(r.user);
+        S.acc.devCode = (r.otp && r.otp.devCode) || "";
+        if (!r.user.phone) {
+          S.user = S.acc.pendingUser; save("imibavu_user", S.user);
+          toast("Account created ✓"); route(); return;
+        }
+        S.acc.authMode = "verify";
+        toast("Account created — verify your phone");
+        route();
+      }).catch(fail);
+      return;
+    }
+
+    if (mode === "verify") {
+      api.post("/auth/otp/verify", { phone: S.acc.pendingPhone, code: String(d.get("code") || "").trim() })
+        .then(() => {
+          if (S.acc.pendingUser) { S.user = S.acc.pendingUser; save("imibavu_user", S.user); }
+          S.acc.pendingUser = null; S.acc.devCode = ""; S.acc.authMode = "login";
+          toast("Phone verified ✓"); route();
+        }).catch(fail);
+      return;
+    }
+
+    if (mode === "reset") {
+      api.post("/auth/reset-password", {
+        phone: normPhone(d.get("phone")),
+        code: String(d.get("code") || "").trim(),
+        newPassword: d.get("password"),
+      }).then(() => {
+        S.acc.authMode = "login"; S.acc.devCode = "";
+        toast("Password changed — sign in");
+        route();
+      }).catch(fail);
+      return;
+    }
+    return;
   }
 
   if (kind === "order") {
@@ -1492,8 +1637,44 @@ function initHeader() {
 }
 
 /* ---------------- init ---------------- */
+function withTimeout(p, ms) {
+  return Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
+  ]);
+}
+
+async function restoreSession() {
+  if (!S.user) return false; /* no previous session — skip the refresh call (avoids a 401 on every fresh visit) */
+  const r = await api.refresh();
+  if (r && r.user) {
+    S.user = { id: r.user.id, name: r.user.name, phone: r.user.phone, email: r.user.email, role: r.user.role, isVerified: r.user.isVerified };
+    save("imibavu_user", S.user);
+    return true;
+  }
+  return false;
+}
+
+async function loadCatalog() {
+  const first = await api.get("/products?limit=100&sort=featured");
+  let items = first.items || [];
+  for (let page = 2; page <= (first.pages || 1); page++) {
+    const next = await api.get(`/products?limit=100&page=${page}&sort=featured`);
+    items = items.concat(next.items || []);
+  }
+  if (items.length) PRODUCTS = items;
+  const brands = await api.get("/brands");
+  if (brands.items && brands.items.length) BRANDS = brands.items;
+}
+
 initHeader();
 applyI18n();
 renderCart();
 window.addEventListener("hashchange", route);
-route();
+route(); /* instant paint — static data.js fallback */
+
+/* bring in the API catalog + restore any existing session */
+Promise.all([
+  withTimeout(restoreSession(), 2500).catch(() => {}),
+  withTimeout(loadCatalog(), 3000).catch(() => {}),
+]).then(() => route());
