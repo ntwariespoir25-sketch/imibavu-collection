@@ -339,18 +339,19 @@ p { margin: 0 0 1em; }
 .logo {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
   margin-right: auto;
 }
 
 .logo-mark {
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   background: var(--ink);
   color: var(--gold-2);
-  border-radius: 8px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
+  object-fit: cover;
   font-family: var(--serif);
   font-size: 1.25rem;
   line-height: 1;
@@ -365,7 +366,7 @@ p { margin: 0 0 1em; }
 
 .logo-text {
   font-family: var(--serif);
-  font-size: 1.32rem;
+  font-size: 1.55rem;
   line-height: 1;
   letter-spacing: .02em;
 }
